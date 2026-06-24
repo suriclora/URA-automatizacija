@@ -89,6 +89,26 @@ def _ucitaj_sliku(path):
     return Image.open(path)
 
 
+def _pdf_tekst(path):
+    """Pročitaj UGRAĐENI tekst iz PDF-a (digitalni e-račun / PDF dobavljača) — točno, bez OCR-a.
+    Vrati spojeni tekst svih stranica ili None ako PDF nema tekstualni sloj (skenirana slika)."""
+    tekst = ""
+    try:
+        import pdfplumber
+        with pdfplumber.open(path) as pdf:
+            tekst = "\n".join((s.extract_text() or "") for s in pdf.pages)
+    except Exception:
+        try:
+            from pypdf import PdfReader
+            tekst = "\n".join((s.extract_text() or "") for s in PdfReader(path).pages)
+        except Exception:
+            return None
+    # Skenirani PDF (samo slika) vrati malo/nimalo teksta -> tada radije OCR
+    if len(re.sub(r"[^0-9A-Za-zČĆĐŠŽčćđšž]", "", tekst)) < 20:
+        return None
+    return tekst
+
+
 def _priprema(path):
     img = _ucitaj_sliku(path)
     img = ImageOps.exif_transpose(img)        # poštuj EXIF rotaciju s mobitela
@@ -149,10 +169,18 @@ def izvuci_polja(tekst):
 
 
 def procitaj_racun(path):
-    """OCR + izvlačenje polja iz jedne slike računa. Vrati dict + 'tekst' (sirovi OCR)."""
-    img = _priprema(path)
-    tekst = _najbolja_orijentacija(img)
+    """Izvlačenje polja iz jednog računa. Vrati dict + 'tekst' (sirovi tekst) + 'izvor'.
+    Digitalni PDF (s tekstualnim slojem) čita se DIREKTNO (točno, bez OCR-a);
+    skenirani PDF i fotke idu na OCR."""
+    tekst, izvor = None, "ocr"
+    if path.lower().endswith(".pdf"):
+        tekst = _pdf_tekst(path)
+        if tekst:
+            izvor = "pdf-tekst"
+    if tekst is None:                              # fotka ili skenirani PDF -> OCR
+        tekst = _najbolja_orijentacija(_priprema(path))
     polja = izvuci_polja(tekst)
     polja["tekst"] = tekst
     polja["datoteka"] = os.path.basename(path)
+    polja["izvor"] = izvor
     return polja

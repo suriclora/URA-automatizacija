@@ -876,7 +876,8 @@ def ocr_fotke_jedan(sesija, idx, logger):
              "bruto": None, "osnovica": None, "pdv": None, "tekst": ""}
     k["ocr"] = o
     k["match"] = _spoji_fotku_s_uplatom(o, sesija.get("uplate") or [])
-    logger.info("  OCR %s | bruto=%s | %s", os.path.basename(k["slika"]), o.get("bruto"),
+    logger.info("  %s %s | bruto=%s | %s", o.get("izvor", "ocr").upper(),
+                os.path.basename(k["slika"]), o.get("bruto"),
                 (f"spojen na izvod (red {k['match']['red']})" if k["match"] else "bez para"))
     return k
 
