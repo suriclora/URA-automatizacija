@@ -1,0 +1,15 @@
+# Tajne i osjetljivi podaci — NIKAD ne dijeliti
+.env
+
+# Logovi i radni/testni podaci
+logs/
+test_data/
+
+# Python smeće
+__pycache__/
+*.pyc
+.venv/
+
+# Dodatna zaštita: prave knjige s makroima nikad ne idu van
+# (demo koristi .xlsx pa demo radi normalno)
+*.xlsm

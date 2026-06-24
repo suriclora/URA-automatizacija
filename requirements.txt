@@ -1,0 +1,31 @@
+# Biblioteke potrebne za projekt. Instalacija:
+#   python -m venv .venv
+#   .venv\Scripts\python.exe -m pip install -r requirements.txt
+
+# --- Jezgra ---
+openpyxl>=3.1         # čitanje/pisanje Excela (.xlsm), čuvanje stilova/formula
+python-dotenv>=1.0    # učitavanje postavki/tajni iz .env
+requests>=2.31        # REST API računovodstvenog servisa (ulazni e-računi)
+
+# --- PDF ---
+pypdf>=4.0            # čitanje teksta iz PDF računa
+pdfplumber>=0.11      # parsiranje bankovnih izvoda (pozicije/tablice)
+PyMuPDF>=1.24         # render PDF stranice u sliku (fitz)
+
+# --- Povezivanje / tekst ---
+rapidfuzz>=3.0        # fuzzy uspoređivanje naziva dobavljača
+
+# --- GUI ---
+customtkinter>=5.2    # moderno desktop sučelje
+
+# --- Excel preko COM-a (putni nalozi: čuva logo/formule/zaštitu) ---
+xlwings>=0.31         # vodi pravi Excel
+pywin32>=306          # Windows COM (potrebno za xlwings)
+
+# --- OCR fotkanih računa ---
+Pillow>=10.0          # obrada slika
+easyocr>=1.7          # OCR (deep-learning, povlači torch/torchvision/opencv) — glavni OCR
+pytesseract>=0.3      # rezervni OCR (treba i instaliran Tesseract)
+
+# --- Opcionalno ---
+# reportlab>=4.0      # generiranje PDF-a iz podataka e-računa (fallback kad nema PDF-a)
