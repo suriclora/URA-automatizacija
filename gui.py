@@ -89,9 +89,27 @@ class App:
         root.minsize(820, 690)
         root.configure(fg_color=POZADINA)
 
+        # Windows/tkinter: znakovi č/ć/ž/š/đ tipkani preko AltGr (= Ctrl+Alt) se ne upišu jer
+        # Tk ima ugrađeno pravilo "<Control-KeyPress> = ništa". Ovo ih ručno upiše u SVA polja.
+        root.bind_class("Entry", "<Control-KeyPress>", self._altgr_upis)
+
         self._gradi()
         self._poll()
         self.osvjezi_plocice()
+
+    @staticmethod
+    def _altgr_upis(event):
+        """AltGr (Ctrl+Alt) + ispisiv znak -> upiši ga ručno (inače ga Tk 'proguta').
+        Hrvatski znakovi (č/ć/ž/š/đ i sl.) su ne-ASCII pa rade i ako maska za Alt zakaže;
+        AltGr ASCII simboli (@, {, […) rade kad je Alt prepoznat. Prave Ctrl-kratice
+        (Ctrl+C/V/A…) daju neispisiv znak ili imaju svoj binding pa ostaju netaknute."""
+        if not event.char or not event.char.isprintable():
+            return None
+        alt = event.state & (0x0008 | 0x20000)        # Alt / AltGr bit (Windows/X11)
+        if alt or ord(event.char) > 127:
+            event.widget.insert("insert", event.char)
+            return "break"
+        return None
 
     # ---------- klikabilna kartica ----------
     def _kartica(self, parent, boja, hover, height, sadrzaj_fn, cmd):
@@ -751,13 +769,15 @@ class App:
         r = red("Broj računa"); self._f_broj = ctk.CTkEntry(r); self._f_broj.pack(side="right", fill="x", expand=True)
         r = red("Auto")
         self._f_auto = ctk.CTkOptionMenu(r, values=[v[0] for v in config.VOZILA],
-                                         command=lambda _=None: self._f_provjera(),
+                                         command=lambda _=None: self._f_osobni_pdv(),
                                          fg_color="#efeee8", text_color="#222",
                                          button_color="#d9d8d1", button_hover_color="#cfcec7")
         self._f_auto.pack(side="right", fill="x", expand=True)
         r = red("Vrsta troška"); self._f_vrsta = ctk.CTkEntry(r); self._f_vrsta.pack(side="right", fill="x", expand=True)
         for e in (self._f_bruto, self._f_osn, self._f_pdv):
             e.bind("<KeyRelease>", lambda _=None: self._f_provjera())
+        # osobni auto: kad korisnik izađe iz PDV polja, prepolovi (50% pretporeza)
+        self._f_pdv.bind("<FocusOut>", lambda _=None: self._f_osobni_pdv())
         self._f_provj = ctk.CTkLabel(d, text="", text_color=ZELENA, font=ctk.CTkFont(size=12),
                                      wraplength=350, justify="left")
         self._f_provj.pack(anchor="w", padx=16, pady=(10, 0))
@@ -810,6 +830,8 @@ class App:
         k = s["kandidati"][i]
         self._f_rot = 0
         self._f_zoom = 1.0
+        self._f_pdv_pola = None      # zadnji prepolovljeni PDV (osobni auto)
+        self._f_pdv_puni = None      # puni PDV prije polovljenja (za vraćanje)
         import os as _os
         self._f_naslov.configure(text=f"Račun {i + 1} / {len(s['kandidati'])}  —  {_os.path.basename(k['slika'])}")
         self._f_obnovi_sliku()                       # slika odmah (ne treba OCR)
@@ -880,12 +902,37 @@ class App:
         post(self._f_vrsta, "")
         self._f_provjera()
 
+    def _f_osobni_pdv(self):
+        """Osobni auto: priznaje se 50% pretporeza -> PDV polje prikaže POLA upisanog iznosa.
+        Pamti puni iznos pa ga vrati ako se vozilo vrati na ne-osobno. Ne polovi dvaput."""
+        osobni = config.vozilo_porez(self._f_auto.get()) == "osobni"
+        trenutno = _pf(self._f_pdv.get())
+        if osobni:
+            # već prepolovljeno (polje sadrži baš naš izračun) -> ne diraj
+            if (self._f_pdv_pola is not None and trenutno is not None
+                    and abs(trenutno - self._f_pdv_pola) < 0.005):
+                self._f_provjera(); return
+            if trenutno is not None:
+                self._f_pdv_puni = trenutno
+                self._f_pdv_pola = round(trenutno / 2, 2)
+                self._f_pdv.delete(0, "end")
+                self._f_pdv.insert(0, f"{self._f_pdv_pola:.2f}".replace(".", ","))
+        else:
+            # vraćeno na ne-osobno: ako smo bili prepolovili, vrati puni iznos
+            if (self._f_pdv_pola is not None and self._f_pdv_puni is not None
+                    and trenutno is not None and abs(trenutno - self._f_pdv_pola) < 0.005):
+                self._f_pdv.delete(0, "end")
+                self._f_pdv.insert(0, f"{self._f_pdv_puni:.2f}".replace(".", ","))
+            self._f_pdv_pola = None
+            self._f_pdv_puni = None
+        self._f_provjera()
+
     def _f_provjera(self):
         osn, pdv = _pf(self._f_osn.get()), _pf(self._f_pdv.get())
         bruto = _pf(self._f_bruto.get())
         osobni = config.vozilo_porez(self._f_auto.get()) == "osobni"
         if osobni:
-            self._f_provj.configure(text="Osobni auto — PDV ide na pola (ne provjeravam zbroj).", text_color=NARANCASTA)
+            self._f_provj.configure(text="Osobni auto — PDV prepolovljen (50% pretporeza).", text_color=NARANCASTA)
         elif osn is not None and pdv is not None and bruto is not None:
             if abs((osn + pdv) - bruto) <= 0.02:
                 self._f_provj.configure(text=f"✓ osnovica + PDV = {osn + pdv:.2f} = bruto", text_color=ZELENA)
