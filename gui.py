@@ -252,7 +252,8 @@ class App:
                                         button_hover_color=GUMB_HOVER)
         self.godina.set(str(d.year))
         ctk.CTkButton(pn, text="Obradi", width=110, height=36, corner_radius=10,
-                      fg_color=TXT, hover_color=TXT, command=self.putni).pack(side="right", padx=(8, 16))
+                      fg_color=ZELENA, hover_color=ZELENA_TAMNA, text_color="white",
+                      command=self.putni).pack(side="right", padx=(8, 16))
         self.godina.pack(side="right", padx=4)
         self.mjesec.pack(side="right", padx=4)
 
