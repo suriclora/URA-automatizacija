@@ -18,15 +18,21 @@ import config
 import main as app
 from src.log_setup import postavi_logging
 
+# Akcentne boje rade u oba načina (svijetli/tamni) pa ostaju obične.
 ZELENA = "#2e8b40"
 ZELENA_TAMNA = "#256e34"
-SIVA_TXT = "#6b6b6b"
-KARTICA = "#ffffff"
-KARTICA_HOVER = "#eef0ea"
-POZADINA = "#f4f3ee"
 NARANCASTA = "#c8881f"
 PLAVA = "#2f6fb0"
 CRVENA = "#b03a3a"
+# Neutralne plohe/tekst kao (svijetla, tamna) — same se prebacuju s ctk.set_appearance_mode().
+SIVA_TXT = ("#6b6b6b", "#a6a6a6")
+KARTICA = ("#ffffff", "#2b2b2e")
+KARTICA_HOVER = ("#eef0ea", "#3a3a40")
+POZADINA = ("#f4f3ee", "#1e1e21")
+GUMB = ("#ebeae4", "#343438")          # sekundarni gumbi / padajući izbornici
+GUMB_HOVER = ("#dddcd5", "#42424a")
+TXT = ("#1f1f1f", "#e6e6e6")           # tamni tekst -> svijetli u tamnom načinu
+PLOHA = ("#fbfbf8", "#26262a")         # svijetle plohe (liste, polja)
 
 
 class TkLogHandler(logging.Handler):
@@ -129,6 +135,13 @@ class App:
             w.bind("<Leave>", leave)
         return fr
 
+    def _toggle_tema(self):
+        """Prebaci svijetli/tamni način rada. Boje zadane kao (svijetla, tamna) par
+        same se prilagode; gumbić mijenja ikonu (🌙 = uključi tamni, ☀️ = vrati svijetli)."""
+        tamni = ctk.get_appearance_mode() == "Dark"
+        ctk.set_appearance_mode("Light" if tamni else "Dark")
+        self._tema_btn.configure(text="🌙" if tamni else "☀️")
+
     # ---------- izgradnja ----------
     def _gradi(self):
         glavni = ctk.CTkFrame(self.root, fg_color="transparent")
@@ -153,8 +166,12 @@ class App:
                      corner_radius=14, font=ctk.CTkFont(size=13, weight="bold")
                      ).pack(side="right", ipadx=12, ipady=6)
         ctk.CTkButton(desno, text="🧹 Obriši pamćenje", width=150, height=30,
-                      fg_color="#e9e8e2", hover_color="#dcdbd4", text_color="#444",
+                      fg_color=GUMB, hover_color=GUMB_HOVER, text_color=TXT,
                       corner_radius=10, command=self.obrisi_pamcenje).pack(side="right", padx=(0, 10))
+        self._tema_btn = ctk.CTkButton(desno, text="🌙", width=36, height=30,
+                      fg_color=GUMB, hover_color=GUMB_HOVER, text_color=TXT,
+                      corner_radius=10, command=self._toggle_tema)
+        self._tema_btn.pack(side="right", padx=(0, 10))
 
         # pločice
         ploce = ctk.CTkFrame(glavni, fg_color="transparent")
@@ -162,7 +179,7 @@ class App:
         self.plo = {}
         # klik na "Fale podaci" -> ekran za upis vrste troška (s prikazom računa)
         klik = {"treba_potvrdu": self.fale_podaci}
-        for kljuc, naslov, boja in (("racuni", "Računi", "#222222"),
+        for kljuc, naslov, boja in (("racuni", "Računi", TXT),
                                     ("treba_potvrdu", "Fale podaci", PLAVA)):
             k = ctk.CTkFrame(ploce, fg_color=KARTICA, corner_radius=14)
             k.pack(side="left", expand=True, fill="x", padx=5)
@@ -208,7 +225,7 @@ class App:
                 def s(fr):
                     w = ctk.CTkFrame(fr, fg_color="transparent")
                     w.place(relx=0.06, rely=0.5, anchor="w")
-                    ctk.CTkLabel(w, text=nas, text_color="#222",
+                    ctk.CTkLabel(w, text=nas, text_color=TXT,
                                  font=ctk.CTkFont(size=15, weight="bold")).pack(anchor="w")
                     ctk.CTkLabel(w, text=pod, text_color=SIVA_TXT,
                                  font=ctk.CTkFont(size=12)).pack(anchor="w")
@@ -221,21 +238,21 @@ class App:
         pn.pack(fill="x", pady=(6, 4))
         pl = ctk.CTkFrame(pn, fg_color="transparent")
         pl.pack(side="left", padx=16, pady=12)
-        ctk.CTkLabel(pl, text="Putni nalozi", text_color="#222",
+        ctk.CTkLabel(pl, text="Putni nalozi", text_color=TXT,
                      font=ctk.CTkFont(size=15, weight="bold")).pack(anchor="w")
         ctk.CTkLabel(pl, text="Pročitaj mjesečni PN Excel i upiši naloge",
                      text_color=SIVA_TXT, font=ctk.CTkFont(size=12)).pack(anchor="w")
         d = datetime.now()
         self.mjesec = ctk.CTkOptionMenu(pn, width=72, values=[f"{m:02d}" for m in range(1, 13)],
-                                        fg_color="#efeee8", text_color="#222", button_color="#d9d8d1",
-                                        button_hover_color="#cfcec7")
+                                        fg_color=GUMB, text_color=TXT, button_color=GUMB_HOVER,
+                                        button_hover_color=GUMB_HOVER)
         self.mjesec.set(f"{d.month:02d}")
         self.godina = ctk.CTkOptionMenu(pn, width=86, values=[str(g) for g in range(2024, 2031)],
-                                        fg_color="#efeee8", text_color="#222", button_color="#d9d8d1",
-                                        button_hover_color="#cfcec7")
+                                        fg_color=GUMB, text_color=TXT, button_color=GUMB_HOVER,
+                                        button_hover_color=GUMB_HOVER)
         self.godina.set(str(d.year))
         ctk.CTkButton(pn, text="Obradi", width=110, height=36, corner_radius=10,
-                      fg_color="#2b2b2b", hover_color="#444", command=self.putni).pack(side="right", padx=(8, 16))
+                      fg_color=TXT, hover_color=TXT, command=self.putni).pack(side="right", padx=(8, 16))
         self.godina.pack(side="right", padx=4)
         self.mjesec.pack(side="right", padx=4)
 
@@ -258,13 +275,13 @@ class App:
 
     # ---------- pomoćno ----------
     def aktivnost(self, tekst, badge="OK", boja=ZELENA):
-        red = ctk.CTkFrame(self.lista, fg_color="#fafaf7", corner_radius=10)
+        red = ctk.CTkFrame(self.lista, fg_color=PLOHA, corner_radius=10)
         red.pack(fill="x", padx=8, pady=4)
         ctk.CTkLabel(red, text="●", text_color=boja,
                      font=ctk.CTkFont(size=14)).pack(side="left", padx=(12, 6))
         srednji = ctk.CTkFrame(red, fg_color="transparent")
         srednji.pack(side="left", fill="x", expand=True, pady=8)
-        ctk.CTkLabel(srednji, text=tekst, text_color="#222", anchor="w",
+        ctk.CTkLabel(srednji, text=tekst, text_color=TXT, anchor="w",
                      font=ctk.CTkFont(size=14), justify="left").pack(anchor="w")
         ctk.CTkLabel(srednji, text=datetime.now().strftime("%H:%M"), text_color=SIVA_TXT,
                      font=ctk.CTkFont(size=11)).pack(anchor="w")
@@ -347,7 +364,7 @@ class App:
         lista.pack(fill="both", expand=True, padx=16, pady=10)
         self._pregled_vars = []
         for k in kand:
-            row = ctk.CTkFrame(lista, fg_color="#fafaf7", corner_radius=8)
+            row = ctk.CTkFrame(lista, fg_color=PLOHA, corner_radius=8)
             row.pack(fill="x", padx=6, pady=3)
             dup = (k["tip"] != "novo")
             var = ctk.BooleanVar(value=not dup)
@@ -368,8 +385,8 @@ class App:
                                         fg_color=ZELENA, hover_color=ZELENA_TAMNA,
                                         command=lambda: self._potvrdi_pregled(sesija, win))
         self._btn_upisi.pack(side="right")
-        ctk.CTkButton(donji, text="Odustani", height=40, corner_radius=10, fg_color="#e0dfd8",
-                      hover_color="#d2d1ca", text_color="#333", command=win.destroy).pack(side="right", padx=8)
+        ctk.CTkButton(donji, text="Odustani", height=40, corner_radius=10, fg_color=GUMB,
+                      hover_color=GUMB_HOVER, text_color=TXT, command=win.destroy).pack(side="right", padx=8)
         self._azur_btn()
         win.after(80, win.lift)
 
@@ -475,8 +492,8 @@ class App:
         ctk.CTkButton(donji, text="Upiši ✓  (pa sljedeći)", height=46, corner_radius=10,
                       fg_color=ZELENA, hover_color=ZELENA_TAMNA, font=ctk.CTkFont(size=14, weight="bold"),
                       command=self._fp_upisi).pack(side="right")
-        ctk.CTkButton(donji, text="Preskoči →", height=46, corner_radius=10, fg_color="#e0dfd8",
-                      hover_color="#d2d1ca", text_color="#333", command=self._fp_preskoci).pack(side="right", padx=8)
+        ctk.CTkButton(donji, text="Preskoči →", height=46, corner_radius=10, fg_color=GUMB,
+                      hover_color=GUMB_HOVER, text_color=TXT, command=self._fp_preskoci).pack(side="right", padx=8)
 
         tijelo = ctk.CTkFrame(win, fg_color="transparent")
         tijelo.pack(fill="both", expand=True, padx=16, pady=(0, 6))
@@ -486,12 +503,12 @@ class App:
         lijevo.pack(side="left", fill="both", expand=True, padx=(0, 10))
         kontrole = ctk.CTkFrame(lijevo, fg_color="transparent")
         kontrole.pack(fill="x", pady=(8, 4))
-        sg = dict(width=42, height=30, fg_color="#e0dfd8", hover_color="#d2d1ca", text_color="#333")
+        sg = dict(width=42, height=30, fg_color=GUMB, hover_color=GUMB_HOVER, text_color=TXT)
         ctk.CTkButton(kontrole, text="−", command=self._fp_zoom_out, **sg).pack(side="left", padx=(10, 2))
         ctk.CTkButton(kontrole, text="+", command=self._fp_zoom_in, **sg).pack(side="left", padx=2)
         ctk.CTkButton(kontrole, text="⟳", command=self._fp_rotiraj, **sg).pack(side="left", padx=2)
-        ctk.CTkButton(kontrole, text="🔍 Otvori PDF", height=30, fg_color="#e0dfd8",
-                      hover_color="#d2d1ca", text_color="#333", command=self._fp_otvori_pdf).pack(side="left", padx=8)
+        ctk.CTkButton(kontrole, text="🔍 Otvori PDF", height=30, fg_color=GUMB,
+                      hover_color=GUMB_HOVER, text_color=TXT, command=self._fp_otvori_pdf).pack(side="left", padx=8)
         skrol = ctk.CTkScrollableFrame(lijevo, fg_color="transparent")
         skrol.pack(fill="both", expand=True, padx=6, pady=(0, 8))
         self._fp_img = ctk.CTkLabel(skrol, text="")
@@ -619,8 +636,8 @@ class App:
         ctk.CTkButton(donji, text="✓ Da, spoji  (pa sljedeći)", height=46, corner_radius=10,
                       fg_color=ZELENA, hover_color=ZELENA_TAMNA, font=ctk.CTkFont(size=14, weight="bold"),
                       command=self._su_spoji).pack(side="right")
-        ctk.CTkButton(donji, text="Preskoči →", height=46, corner_radius=10, fg_color="#e0dfd8",
-                      hover_color="#d2d1ca", text_color="#333", command=self._su_preskoci).pack(side="right", padx=8)
+        ctk.CTkButton(donji, text="Preskoči →", height=46, corner_radius=10, fg_color=GUMB,
+                      hover_color=GUMB_HOVER, text_color=TXT, command=self._su_preskoci).pack(side="right", padx=8)
 
         tijelo = ctk.CTkFrame(win, fg_color="transparent")
         tijelo.pack(fill="both", expand=True, padx=16, pady=10)
@@ -723,8 +740,8 @@ class App:
         ctk.CTkButton(donji, text="Upiši ✓  (pa sljedeći)", height=46, corner_radius=10,
                       fg_color=ZELENA, hover_color=ZELENA_TAMNA, font=ctk.CTkFont(size=14, weight="bold"),
                       command=self._f_upisi).pack(side="right")
-        ctk.CTkButton(donji, text="Preskoči →", height=46, corner_radius=10, fg_color="#e0dfd8",
-                      hover_color="#d2d1ca", text_color="#333", command=self._f_preskoci).pack(side="right", padx=8)
+        ctk.CTkButton(donji, text="Preskoči →", height=46, corner_radius=10, fg_color=GUMB,
+                      hover_color=GUMB_HOVER, text_color=TXT, command=self._f_preskoci).pack(side="right", padx=8)
 
         tijelo = ctk.CTkFrame(win, fg_color="transparent")
         tijelo.pack(fill="both", expand=True, padx=16, pady=(0, 6))
@@ -734,12 +751,12 @@ class App:
         lijevo.pack(side="left", fill="both", expand=True, padx=(0, 10))
         kontrole = ctk.CTkFrame(lijevo, fg_color="transparent")
         kontrole.pack(fill="x", pady=(8, 4))
-        sg = dict(width=42, height=30, fg_color="#e0dfd8", hover_color="#d2d1ca", text_color="#333")
+        sg = dict(width=42, height=30, fg_color=GUMB, hover_color=GUMB_HOVER, text_color=TXT)
         ctk.CTkButton(kontrole, text="−", command=self._f_zoom_out, **sg).pack(side="left", padx=(10, 2))
         ctk.CTkButton(kontrole, text="+", command=self._f_zoom_in, **sg).pack(side="left", padx=2)
         ctk.CTkButton(kontrole, text="⟳", command=self._f_rotiraj, **sg).pack(side="left", padx=2)
-        ctk.CTkButton(kontrole, text="🔍 Otvori sliku", height=30, fg_color="#e0dfd8",
-                      hover_color="#d2d1ca", text_color="#333",
+        ctk.CTkButton(kontrole, text="🔍 Otvori sliku", height=30, fg_color=GUMB,
+                      hover_color=GUMB_HOVER, text_color=TXT,
                       command=self._f_otvori_sliku).pack(side="left", padx=8)
         # scroll područje (da se zoomirana slika može pomicati)
         skrol = ctk.CTkScrollableFrame(lijevo, fg_color="transparent")
@@ -770,8 +787,8 @@ class App:
         r = red("Auto")
         self._f_auto = ctk.CTkOptionMenu(r, values=[v[0] for v in config.VOZILA],
                                          command=lambda _=None: self._f_osobni_pdv(),
-                                         fg_color="#efeee8", text_color="#222",
-                                         button_color="#d9d8d1", button_hover_color="#cfcec7")
+                                         fg_color=GUMB, text_color=TXT,
+                                         button_color=GUMB_HOVER, button_hover_color=GUMB_HOVER)
         self._f_auto.pack(side="right", fill="x", expand=True)
         r = red("Vrsta troška"); self._f_vrsta = ctk.CTkEntry(r); self._f_vrsta.pack(side="right", fill="x", expand=True)
         for e in (self._f_bruto, self._f_osn, self._f_pdv):
@@ -1003,28 +1020,28 @@ class App:
         karta = ctk.CTkFrame(win, fg_color=KARTICA, corner_radius=12); karta.pack(fill="x", padx=16, pady=12)
 
         r1 = ctk.CTkFrame(karta, fg_color="transparent"); r1.pack(fill="x", padx=14, pady=(12, 6))
-        ctk.CTkLabel(r1, text="Mjesec / godina", width=120, anchor="w", text_color="#333").pack(side="left")
+        ctk.CTkLabel(r1, text="Mjesec / godina", width=120, anchor="w", text_color=TXT).pack(side="left")
         self._g_mj = ctk.CTkOptionMenu(r1, width=70, values=[f"{m:02d}" for m in range(1, 13)],
-                                       fg_color="#efeee8", text_color="#222", button_color="#d9d8d1")
+                                       fg_color=GUMB, text_color=TXT, button_color=GUMB_HOVER)
         self._g_mj.set(f"{d.month:02d}"); self._g_mj.pack(side="left", padx=4)
         self._g_god = ctk.CTkOptionMenu(r1, width=84, values=[str(g) for g in range(2024, 2031)],
-                                        fg_color="#efeee8", text_color="#222", button_color="#d9d8d1")
+                                        fg_color=GUMB, text_color=TXT, button_color=GUMB_HOVER)
         self._g_god.set(str(d.year)); self._g_god.pack(side="left", padx=4)
 
         r2 = ctk.CTkFrame(karta, fg_color="transparent"); r2.pack(fill="x", padx=14, pady=6)
         self._g_enc = None
         self._g_enc_lbl = ctk.CTkLabel(r2, text="ENC: (nije odabran — bit će standardna vremena)",
                                        text_color=SIVA_TXT, anchor="w")
-        ctk.CTkButton(r2, text="Odaberi ENC CSV…", width=150, height=30, fg_color="#e0dfd8",
-                      hover_color="#d2d1ca", text_color="#333", command=self._g_odaberi_enc).pack(side="left")
+        ctk.CTkButton(r2, text="Odaberi ENC CSV…", width=150, height=30, fg_color=GUMB,
+                      hover_color=GUMB_HOVER, text_color=TXT, command=self._g_odaberi_enc).pack(side="left")
         self._g_enc_lbl.pack(side="left", padx=10)
 
         donji = ctk.CTkFrame(win, fg_color="transparent"); donji.pack(fill="x", padx=16, pady=(4, 14))
         ctk.CTkButton(donji, text="Generiraj ✓", height=42, corner_radius=10, fg_color=ZELENA,
                       hover_color=ZELENA_TAMNA, font=ctk.CTkFont(size=14, weight="bold"),
                       command=lambda: self._g_pokreni(win)).pack(side="right")
-        ctk.CTkButton(donji, text="Odustani", height=42, corner_radius=10, fg_color="#e0dfd8",
-                      hover_color="#d2d1ca", text_color="#333", command=win.destroy).pack(side="right", padx=8)
+        ctk.CTkButton(donji, text="Odustani", height=42, corner_radius=10, fg_color=GUMB,
+                      hover_color=GUMB_HOVER, text_color=TXT, command=win.destroy).pack(side="right", padx=8)
         win.after(80, win.lift)
 
     def _g_odaberi_enc(self):
@@ -1032,7 +1049,7 @@ class App:
                                        filetypes=[("CSV", "*.csv"), ("Sve", "*.*")])
         if p:
             self._g_enc = p
-            self._g_enc_lbl.configure(text=f"ENC: {os.path.basename(p)}", text_color="#222")
+            self._g_enc_lbl.configure(text=f"ENC: {os.path.basename(p)}", text_color=TXT)
         # vrati fokus na prozor (inače se sakri pa treba ponovo kliknuti)
         try:
             self._g_win.lift()
@@ -1095,13 +1112,13 @@ class App:
 
         def red(naziv, w):
             r = ctk.CTkFrame(skrol, fg_color="transparent"); r.pack(fill="x", padx=10, pady=5)
-            ctk.CTkLabel(r, text=naziv, width=128, anchor="w", text_color="#333").pack(side="left")
+            ctk.CTkLabel(r, text=naziv, width=128, anchor="w", text_color=TXT).pack(side="left")
             w.pack(side="right", fill="x", expand=True)
             return w
 
         def menu(values, default=None):
-            m = ctk.CTkOptionMenu(skrol, values=values or ["—"], fg_color="#efeee8", text_color="#222",
-                                  button_color="#d9d8d1", button_hover_color="#cfcec7")
+            m = ctk.CTkOptionMenu(skrol, values=values or ["—"], fg_color=GUMB, text_color=TXT,
+                                  button_color=GUMB_HOVER, button_hover_color=GUMB_HOVER)
             if default:
                 m.set(default)
             return m
@@ -1133,8 +1150,8 @@ class App:
         ctk.CTkButton(donji, text="Izradi nalog ✓", height=42, corner_radius=10, fg_color=ZELENA,
                       hover_color=ZELENA_TAMNA, font=ctk.CTkFont(size=14, weight="bold"),
                       command=lambda: self._putni_izradi(win)).pack(side="right")
-        ctk.CTkButton(donji, text="Odustani", height=42, corner_radius=10, fg_color="#e0dfd8",
-                      hover_color="#d2d1ca", text_color="#333", command=win.destroy).pack(side="right", padx=8)
+        ctk.CTkButton(donji, text="Odustani", height=42, corner_radius=10, fg_color=GUMB,
+                      hover_color=GUMB_HOVER, text_color=TXT, command=win.destroy).pack(side="right", padx=8)
         win.after(80, win.lift)
 
     def _putni_izradi(self, win):
