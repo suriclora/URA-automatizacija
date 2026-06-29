@@ -201,7 +201,7 @@ def pripremi(ws, logger, stat, stanje):
     imena = vrsta_mod.nauci_imena(wb_val[config.GLAVNI_SHEET], config.HEADER_RED)
     wb_val.close()
 
-    # BROJ RAČUNA JE KLJUČ (dogovor s Antonijem): 'preostali' su računi čiji broj NIJE u knjizi
+    # BROJ RAČUNA JE KLJUČ (dogovoreno s korisnikom): 'preostali' su računi čiji broj NIJE u knjizi
     # (filtriraj_nove) i koji su od datuma starta. Različit broj = SIGURNO NIJE duplikat — čak i
     # kod istog iznosa/datuma (mjesečni računi). Zato su SVI 'novo'. (Stari dedup po iznosu+datumu
     # je isključen jer je krivo označavao mjesečne račune kao 'mogući duplikat'.)
@@ -893,7 +893,7 @@ def upisi_fotku(sesija, idx, polja, logger):
     def _kljuc_broja(s):
         return "".join(ch for ch in str(s or "").lower() if ch.isalnum())
     nb = _kljuc_broja(polja.get("broj"))
-    if nb:
+    if nb and not getattr(config, "DEMO", False):   # u DEMO načinu ne pamtimo (za demo/snimanje)
         for i in range(config.HEADER_RED + 1, ws.max_row + 1):
             rb = ws.cell(row=i, column=2).value
             if rb and _kljuc_broja(rb) == nb:
