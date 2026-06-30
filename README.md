@@ -1,7 +1,7 @@
 # URA — Automatizacija obrade ulaznih računa
 
 Desktop aplikacija (Python) koja automatizira knjiženje ulaznih računa u
-računovodstvu: povuče e-račune iz vanjskog servisa, poveže ih s bankovnim
+administraciji: povuče e-račune iz vanjskog servisa, poveže ih s bankovnim
 izvodima i pripremi za upis u knjigu — uz pregled i potvrdu prije svakog upisa.
 
 > **Napomena:** Ovo je *portfolio* verzija. Radi na **potpuno izmišljenim demo
@@ -12,7 +12,7 @@ izvodima i pripremi za upis u knjigu — uz pregled i potvrdu prije svakog upisa
 
 ## Problem
 
-U manjem računovodstvu obrada ulaznih računa je dugotrajna i sklona greškama:
+U manjoj firmi obrada ulaznih računa je dugotrajna i sklona greškama:
 
 - računi stižu iz više izvora (e-računi preko servisa, PDF-ovi dobavljača, papirnati/fiskalni računi),
 - svaki treba upisati u knjigu s ispravnim podacima (dobavljač, iznosi, PDV, vrsta troška),
@@ -106,11 +106,21 @@ putanje/ključeve. Ništa od toga nije u kodu.
 
 ## Screenshotovi
 
-| Nadzorna ploča | Ekran za potvrdu | Izvještaj |
-|---|---|---|
-| _(screenshots/dashboard.png)_ | _(screenshots/potvrda.png)_ | _(screenshots/izvjestaj.png)_ |
+**Nadzorna ploča**
+
+![Nadzorna ploča](screenshots/dashboard.png)
+
+**Ekran za potvrdu (fotografirani/PDF račun → predpopunjena polja)**
+
+![Ekran za potvrdu](screenshots/potvrda.png)
+
+**Izvještaj (računi kojima fali izvod) i generiranje putnih naloga**
+
+![Izvještaj](screenshots/izvjestaj.png)
+
+![Putni nalozi](screenshots/putni-nalozi.png)
 
 ---
 
-*Projekt sam izradila samostalno, učeći usput i koristeći AI-alat kao pomoć pri
-programiranju — od ideje i analize stvarnog problema do gotove aplikacije.*
+*Projekt sam osmislila i izradila koristeći AI-alat (Claude Code) kao programskog
+pomoćnika — od ideje i analize stvarnog problema do gotove aplikacije koju koristim u praksi.*

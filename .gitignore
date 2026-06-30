@@ -13,3 +13,8 @@ __pycache__/
 # Dodatna zaštita: prave knjige s makroima nikad ne idu van
 # (demo koristi .xlsx pa demo radi normalno)
 *.xlsm
+
+# Demo runtime stanje (regenerira se) i sirovi screenshotovi
+demo/data/stanje_demo.json
+demo/data/*.bak
+screenshots/Screenshot*.png
