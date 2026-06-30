@@ -25,7 +25,7 @@ Sve se to radilo ručno, stavku po stavku.
 
 Aplikacija to objedinjuje u jedan tijek „pregledaj → potvrdi → upiši":
 
-1. **Dohvat** novih ulaznih e-računa iz vanjskog računovodstvenog servisa (REST API).
+1. **Dohvat** novih ulaznih e-računa iz vanjskog servisa za e-račune (REST API).
 2. **Čitanje dokumenata** — iz PDF-a/e-računa izvuče broj, datum, dobavljača, iznose i PDV; za fotografirane papirnate račune koristi **OCR**.
 3. **Povezivanje s bankovnim izvodima** — parsira PDF izvode više banaka i poveže uplate s odgovarajućim računima.
 4. **Priprema upisa** u Excel knjigu, uz **ekran za potvrdu** (✓/✗ po stavci) prije nego se išta zapiše.
