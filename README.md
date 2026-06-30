@@ -8,6 +8,8 @@ izvodima i pripremi za upis u knjigu — uz pregled i potvrdu prije svakog upisa
 > podacima** i ne sadrži nikakve stvarne podatke ni tajne. Sve putanje i ključevi
 > postavljaju se kroz `.env` (vidi `.env.example`).
 
+🎥 **Demo video:** [media/demo.mp4](media/demo.mp4) — kratak prikaz rada aplikacije (klikni za reprodukciju).
+
 ---
 
 ## Problem
