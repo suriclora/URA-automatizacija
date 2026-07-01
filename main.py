@@ -899,7 +899,8 @@ def upisi_fotku(sesija, idx, polja, logger):
         for i in range(config.HEADER_RED + 1, ws.max_row + 1):
             rb = ws.cell(row=i, column=2).value
             if rb and _kljuc_broja(rb) == nb:
-                rd = _datum_celije(ws.cell(row=i, column=4).value)
+                c4 = ws.cell(row=i, column=4).value
+                rd = _datum_celije(c4) or (_parse_datum_hr(c4) if isinstance(c4, str) else None)
                 if nd is None or rd == nd:
                     post_ur = ws.cell(row=i, column=1).value
                     logger.info("⏭️ Fotka — broj %s + datum %s već postoji (UR %s) — NE upisujem.",
