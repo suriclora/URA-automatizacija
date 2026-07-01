@@ -24,10 +24,23 @@ os.environ.setdefault("TESSDATA_PREFIX", _TESSDATA)
 
 
 def _broj(s):
-    """'1.234,56' / '85,60' -> float; None ako ne valja."""
+    """Novčani iznos -> float. Podnosi zarez ILI točku kao decimalni znak i OCR razmake:
+    '1.234,56', '85,60', '11.60', '11 .60', '2 . 32' -> ispravan broj. None ako ne valja."""
     if not s:
         return None
-    s = s.replace(".", "").replace(",", ".")
+    s = str(s).replace(" ", "").strip()
+    if not s:
+        return None
+    if "," in s:
+        # zarez = decimalni; točke = tisućice (europski zapis)
+        s = s.replace(".", "").replace(",", ".")
+    else:
+        # samo točke: zadnja je decimalna ako iza nje 1-2 znamenke, inače su tisućice
+        d = s.rsplit(".", 1)
+        if len(d) == 2 and 1 <= len(d[1]) <= 2:
+            s = d[0].replace(".", "") + "." + d[1]
+        else:
+            s = s.replace(".", "")
     try:
         return round(float(s), 2)
     except ValueError:
@@ -127,6 +140,10 @@ def _priprema(path):
 # rekapitulacija PDV-a: redak "STOPA  OSNOVICA  POREZ" (npr. '13,00  12,48  1,62')
 _REKAP = re.compile(r"\b(0|5|13|25)(?:[.,]00)?\s+(\d{1,3}(?:[.,]\d{2}))\s+(\d{1,3}(?:[.,]\d{2}))")
 
+# Novčani iznos: znamenka, pa znamenke/razmaci/točke, pa . ili , i 2 decimale.
+# Podnosi OCR razmake i točku ILI zarez: '85,60', '1.234,56', '11.60', '11 .60', '2 . 32'.
+_NUM = r"\d[\d .]*[.,]\d{2}"
+
 
 def izvuci_polja(tekst):
     """Iz OCR teksta izvuci polja. Vrati dict (vrijednosti mogu biti None)."""
@@ -139,31 +156,50 @@ def izvuci_polja(tekst):
     broj = naj(r"(?:R[-\s]?1\s*broj|Rn|ra[čc]un[a-z]*\s*(?:br\.?|broj)?)\s*[:.\s]\s*([0-9][\w\-/]+)")
     if broj and len(re.sub(r"[^0-9]", "", broj)) < 4:
         broj = None     # prekratko (npr. '15','05') = vjerojatno smeće -> radije prazno
-    datum = naj(r"(\d{1,2}\.\d{1,2}\.\d{4})")
+
+    # datum: separator . / ili - (npr. '20/05/2026') -> normaliziraj na 'DD.MM.YYYY'
+    dm = re.search(r"(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{4})", t)
+    datum = f"{int(dm.group(1)):02d}.{int(dm.group(2)):02d}.{dm.group(3)}" if dm else None
+
     oib_kupca = re.findall(r"\b(\d{11})\b", t)
 
-    # bruto: 'ZA PLATITI', pa 'kartica ... X', pa 'UKUPNO'
-    bruto = (naj(r"za\s*platiti\D{0,12}(\d[\d.]*,\d{2})")
-             or naj(r"kartica\D{0,12}(\d[\d.]*,\d{2})")
-             or naj(r"ukupno\s*€?\D{0,8}(\d[\d.]*,\d{2})"))
+    # za iznose radimo na kopiji BEZ datuma i vremena (inače '15.05.2026' izgleda kao novac)
+    t_izn = re.sub(r"\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4}", " ", t)
+    t_izn = re.sub(r"\d{1,2}\s*:\s*\d{2}", " ", t_izn)
+
+    def naji(p):
+        m = re.search(p, t_izn, re.I)
+        return m.group(1).strip() if m else None
+
+    # bruto: 'ZA PLATITI' / 'UKUPNO'/'UKUPAN' / 'IZNOS' / 'kartica' ...
+    bruto = _broj(naji(rf"za\s*platiti\D{{0,20}}({_NUM})")
+                  or naji(rf"ukup\w*\D{{0,20}}({_NUM})")
+                  or naji(rf"iznos\D{{0,20}}({_NUM})")
+                  or naji(rf"kartica\D{{0,20}}({_NUM})"))
+    if bruto is None:
+        # rezerva: kad ključna riječ ne upali (raštrkan OCR) -> ukupno je gotovo uvijek
+        # najveći novčani iznos (ID-evi i vremena nemaju 2 decimale pa ne smetaju)
+        iznosi = [v for v in (_broj(x) for x in re.findall(_NUM, t_izn)) if v is not None]
+        if iznosi:
+            bruto = max(iznosi)
 
     # osnovica/PDV: prvo 'ukupno neto'/'ukupno porez' (INA), pa rekapitulacija (zbroj stopa)
-    osnovica = naj(r"ukupn[oi]\s*neto\D{0,8}(\d[\d.]*,\d{2})")
-    pdv = naj(r"ukupn[oi]\s*porez\D{0,8}(\d[\d.]*,\d{2})")
+    osnovica = _broj(naji(rf"ukupn[oi]\s*neto\D{{0,20}}({_NUM})"))
+    pdv = _broj(naji(rf"ukupn[oi]\s*porez\D{{0,20}}({_NUM})"))
     if osnovica is None or pdv is None:
-        rek = _REKAP.findall(t)
+        rek = _REKAP.findall(t_izn)
         if rek:
             so = round(sum(_broj(o) or 0 for _, o, _ in rek), 2)
             sp = round(sum(_broj(p) or 0 for _, _, p in rek), 2)
-            osnovica = osnovica or (f"{so:.2f}".replace(".", ",") if so else None)
-            pdv = pdv or (f"{sp:.2f}".replace(".", ",") if sp else None)
+            osnovica = osnovica if osnovica is not None else (so or None)
+            pdv = pdv if pdv is not None else (sp or None)
 
     return {
         "broj": broj,
         "datum": datum,
-        "bruto": _broj(bruto),
-        "osnovica": _broj(osnovica),
-        "pdv": _broj(pdv),
+        "bruto": bruto,
+        "osnovica": osnovica,
+        "pdv": pdv,
         "oib": oib_kupca,
     }
 
