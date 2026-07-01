@@ -105,15 +105,19 @@ class App:
 
     @staticmethod
     def _altgr_upis(event):
-        """AltGr (Ctrl+Alt) + ispisiv znak -> upiši ga ručno (inače ga Tk 'proguta').
-        Hrvatski znakovi (č/ć/ž/š/đ i sl.) su ne-ASCII pa rade i ako maska za Alt zakaže;
-        AltGr ASCII simboli (@, {, […) rade kad je Alt prepoznat. Prave Ctrl-kratice
-        (Ctrl+C/V/A…) daju neispisiv znak ili imaju svoj binding pa ostaju netaknute."""
-        if not event.char or not event.char.isprintable():
+        """AltGr (Ctrl+Alt) + znak -> upiši ga ručno (inače ga Tk 'proguta' preko ugrađenog
+        no-op <Control-KeyPress>). Znak uzmi iz event.char; ako je prazan (AltGr zna dati
+        prazan char) dohvatimo hrvatsko slovo iz keysym-a. Prave Ctrl-kratice (Ctrl+C/V/A…)
+        daju neispisiv znak ili nemaju keysym u mapi pa ostaju netaknute."""
+        hr = {"ccaron": "č", "Ccaron": "Č", "cacute": "ć", "Cacute": "Ć",
+              "zcaron": "ž", "Zcaron": "Ž", "scaron": "š", "Scaron": "Š",
+              "dstroke": "đ", "Dstroke": "Đ"}
+        ch = event.char if (event.char and event.char.isprintable()) else hr.get(event.keysym, "")
+        if not ch:
             return None
         alt = event.state & (0x0008 | 0x20000)        # Alt / AltGr bit (Windows/X11)
-        if alt or ord(event.char) > 127:
-            event.widget.insert("insert", event.char)
+        if alt or ord(ch) > 127:
+            event.widget.insert("insert", ch)
             return "break"
         return None
 

@@ -888,19 +888,23 @@ def upisi_fotku(sesija, idx, polja, logger):
     pdv, vozilo, vrsta}. Vrati dodijeljeni UR broj."""
     ws, wb, stanje = sesija["ws"], sesija["wb"], sesija["stanje"]
 
-    # DUPLIKAT PO BROJU RAČUNA: ako isti broj (onaj koji je korisnik ispravio) već
-    # postoji u knjizi -> NE upisuj (vrati oznaku duplikata da ekran javi i preskoči).
+    # DUPLIKAT PO BROJU + DATUMU: isti broj računa NIJE dovoljan za preskakanje jer neki
+    # troškovi (npr. redovne bankovne kamate) uvijek imaju isti broj, a različit datum. Zato
+    # preskačemo SAMO ako se poklapaju broj I datum. Isti broj + novi datum = upiši.
     def _kljuc_broja(s):
         return "".join(ch for ch in str(s or "").lower() if ch.isalnum())
     nb = _kljuc_broja(polja.get("broj"))
+    nd = polja.get("datum")   # date objekt (ili None ako datum nije pročitan)
     if nb and not getattr(config, "DEMO", False):   # u DEMO načinu ne pamtimo (za demo/snimanje)
         for i in range(config.HEADER_RED + 1, ws.max_row + 1):
             rb = ws.cell(row=i, column=2).value
             if rb and _kljuc_broja(rb) == nb:
-                post_ur = ws.cell(row=i, column=1).value
-                logger.info("⏭️ Fotka — broj %s već postoji (UR %s) — NE upisujem (duplikat).",
-                            polja.get("broj"), post_ur)
-                return {"duplikat": True, "ur": post_ur, "broj": polja.get("broj")}
+                rd = _datum_celije(ws.cell(row=i, column=4).value)
+                if nd is None or rd == nd:
+                    post_ur = ws.cell(row=i, column=1).value
+                    logger.info("⏭️ Fotka — broj %s + datum %s već postoji (UR %s) — NE upisujem.",
+                                polja.get("broj"), nd, post_ur)
+                    return {"duplikat": True, "ur": post_ur, "broj": polja.get("broj")}
 
     pisi = not config.SIMULACIJA
     premjesti = pisi and (not config.KORISTI_TEST_EXCEL or getattr(config, "PRISILI_DATOTEKE", False))
