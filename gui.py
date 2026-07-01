@@ -98,10 +98,32 @@ class App:
         # Windows/tkinter: znakovi č/ć/ž/š/đ tipkani preko AltGr (= Ctrl+Alt) se ne upišu jer
         # Tk ima ugrađeno pravilo "<Control-KeyPress> = ništa". Ovo ih ručno upiše u SVA polja.
         root.bind_class("Entry", "<Control-KeyPress>", self._altgr_upis)
+        # Neke HR tipkovnice šalju č/ć/đ kao Latin-1 dvojnike (è/æ/ð) — ispravljamo pri upisu.
+        root.bind_class("Entry", "<KeyPress>", self._key_fix, add="+")
 
         self._gradi()
         self._poll()
         self.osvjezi_plocice()
+
+    # Neke HR tipkovnice šalju č/ć/đ kao Latin-1 dvojnike; preslikaj na prava slova.
+    _HR_FIX = {"è": "č", "È": "Č", "æ": "ć", "Æ": "Ć", "ð": "đ", "Ð": "Đ"}
+
+    @staticmethod
+    def _key_fix(event):
+        """Ako tipka pošalje krivi Latin-1 dvojnik (è/æ/ð...), zamijeni ga ispravnim
+        hrvatskim slovom (č/ć/đ...). Radi bez obzira je li Tk već umetnuo krivi znak."""
+        ch = App._HR_FIX.get(event.char)
+        if not ch:
+            return None
+        w = event.widget
+        try:
+            pos = w.index("insert")
+            if pos > 0 and w.get()[pos - 1] == event.char:
+                w.delete(pos - 1, pos)
+            w.insert("insert", ch)
+        except Exception:
+            return None
+        return "break"
 
     @staticmethod
     def _altgr_upis(event):
