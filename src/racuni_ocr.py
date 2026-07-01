@@ -179,7 +179,8 @@ def izvuci_polja(tekst):
     if bruto is None:
         # rezerva: kad ključna riječ ne upali (raštrkan OCR) -> ukupno je gotovo uvijek
         # najveći novčani iznos (ID-evi i vremena nemaju 2 decimale pa ne smetaju)
-        iznosi = [v for v in (_broj(x) for x in re.findall(_NUM, t_izn)) if v is not None]
+        iznosi = [v for v in (_broj(x) for x in re.findall(_NUM, t_izn))
+                  if v is not None and 0 < v < 100000]   # odbaci besmislice (dugi ID-evi)
         if iznosi:
             bruto = max(iznosi)
 
