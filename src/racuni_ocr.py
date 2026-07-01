@@ -77,18 +77,19 @@ def _ocr(img):
 
 
 def _najbolja_orijentacija(img):
-    """Fotka zna biti zarotirana (bočno). Probaj 0/90/180/270 i uzmi tekst s NAJVIŠE
-    prepoznatih znamenki i hrvatskih riječi (gruba, ali radi za račune)."""
+    """Fotka zna biti bočno ILI naopako zarotirana. Probaj SVE 4 orijentacije (0/90/270/180)
+    i uzmi tekst s NAJVIŠE znamenki i ključnih riječi. Stane čim nađe dovoljno dobru
+    orijentaciju (da ne troši vrijeme; EasyOCR je spor)."""
     najbolji, ocjena = None, -1
-    for ang in (0, 270):                      # uglavnom EXIF već uspravi; 270 hvata bočne
+    for ang in (0, 90, 270, 180):             # 0 najčešći; 90/270 bočne; 180 naopako
         slika = img if ang == 0 else img.rotate(ang, expand=True)
         t = _ocr(slika)
         bod = len(re.findall(r"\d", t)) + 5 * len(re.findall(
             r"(?i)\b(ukupno|porez|osnovica|ra[čc]un|datum|platiti|kartica|PDV)\b", t))
         if bod > ocjena:
             najbolji, ocjena = t, bod
-        if ang == 0 and bod >= 8:
-            break   # 0° je već dobar -> ne troši vrijeme na rotaciju (EasyOCR je sporiji)
+        if bod >= 8:
+            break   # dovoljno dobra orijentacija -> stani
     return najbolji or ""
 
 
