@@ -580,9 +580,39 @@ def _novi_stat():
             "zadnji_racun": None}
 
 
+def _ur_iz_imena(f):
+    """Iz naziva PDF-a izvuci UR broj. Hvata 'UR 0492.pdf' i 'UR 0492_PN 060.pdf' -> 492.
+    None ako ne počinje s 'UR' + broj ili nije .pdf."""
+    if not f.lower().endswith(".pdf"):
+        return None
+    ostatak = f.strip()
+    if not ostatak[:2].lower() == "ur":
+        return None
+    ostatak = ostatak[2:].lstrip()          # nakon 'UR' i razmaka
+    broj = ""
+    for ch in ostatak:
+        if ch.isdigit():
+            broj += ch
+        else:
+            break                            # broj završava na prvom ne-znamenki
+    return int(broj) if broj else None
+
+
 def dopuni_hyperlinkove(ws, logger, stat):
-    """Za UR retke kojima FALI klik-poveznica: ako u pdf mapi već postoji 'UR XXXX.pdf'
-    (npr. ručno spremljen sken), dodaj plavu poveznicu na taj PDF. Vrati True ako je dodano."""
+    """Za UR retke kojima FALI klik-poveznica: ako u pdf mapi postoji datoteka koja počinje
+    s tim UR brojem (npr. 'UR 0492.pdf' ili 'UR 0492_PN 060.pdf'), dodaj plavu poveznicu.
+    Vrati True ako je nešto dodano."""
+    # jednom pročitaj pdf mapu i složi mapu: UR broj -> naziv datoteke
+    mapa = {}
+    try:
+        for f in sorted(os.listdir(config.FOLDER_PDF_FINAL)):
+            ur = _ur_iz_imena(f)
+            if ur is not None:
+                mapa.setdefault(ur, f)       # prvi po abecedi ako ih je više
+    except OSError as e:
+        logger.error("Ne mogu pročitati pdf mapu: %s", e)
+        return False
+
     dodano = 0
     for i in range(config.HEADER_RED + 1, ws.max_row + 1):
         c = ws.cell(row=i, column=1)
@@ -592,12 +622,12 @@ def dopuni_hyperlinkove(ws, logger, stat):
         if not isinstance(ur, int) or ur <= 0:
             continue
         if c.hyperlink is not None:
-            continue                       # već ima poveznicu
-        put = os.path.join(config.FOLDER_PDF_FINAL, f"UR {str(ur).zfill(4)}.pdf")
-        if os.path.exists(put):
-            excel_mod.postavi_hyperlink(ws, i, 1, put)
+            continue                         # već ima poveznicu
+        f = mapa.get(ur)
+        if f:
+            excel_mod.postavi_hyperlink(ws, i, 1, os.path.join(config.FOLDER_PDF_FINAL, f))
             dodano += 1
-            logger.info("   🔗 dodana poveznica koja je falila: UR %04d", ur)
+            logger.info("   🔗 UR %04d → %s", ur, f)
     stat["linkovi_dodani"] = dodano
     if dodano:
         logger.info("Dopunjeno poveznica koje su falile: %s", dodano)
