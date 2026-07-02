@@ -527,6 +527,8 @@ def obradi_putne(ws, pn_excel_path, logger, stat, pisi, imena=None, stanje=None)
     except Exception as e:
         logger.error("Ne mogu pročitati PN Excel %s: %s", pn_excel_path, e)
         return False, 0
+    # upisuj po rastućem PN broju -> i UR brojevi idu redom (od manjeg prema većem)
+    nalozi.sort(key=lambda n: int("".join(ch for ch in n["broj"] if ch.isdigit()) or 0))
     logger.info("-" * 64)
     logger.info("PUTNI NALOZI — %s naloga u: %s", len(nalozi), os.path.basename(pn_excel_path))
 
