@@ -575,9 +575,33 @@ def _novi_stat():
             "parra_premjesteno": 0, "greske": 0,
             # izvodi:
             "izvoda_obradeno": 0, "spojeno": 0, "dnevnice": 0, "ur0_redova": 0,
-            "preskoceno_uplata": 0, "deferno": 0,
+            "preskoceno_uplata": 0, "deferno": 0, "linkovi_dodani": 0,
             # za prijateljski status (GUI):
             "zadnji_racun": None}
+
+
+def dopuni_hyperlinkove(ws, logger, stat):
+    """Za UR retke kojima FALI klik-poveznica: ako u pdf mapi već postoji 'UR XXXX.pdf'
+    (npr. ručno spremljen sken), dodaj plavu poveznicu na taj PDF. Vrati True ako je dodano."""
+    dodano = 0
+    for i in range(config.HEADER_RED + 1, ws.max_row + 1):
+        c = ws.cell(row=i, column=1)
+        ur = c.value
+        if isinstance(ur, float) and ur.is_integer():
+            ur = int(ur)
+        if not isinstance(ur, int) or ur <= 0:
+            continue
+        if c.hyperlink is not None:
+            continue                       # već ima poveznicu
+        put = os.path.join(config.FOLDER_PDF_FINAL, f"UR {str(ur).zfill(4)}.pdf")
+        if os.path.exists(put):
+            excel_mod.postavi_hyperlink(ws, i, 1, put)
+            dodano += 1
+            logger.info("   🔗 dodana poveznica koja je falila: UR %04d", ur)
+    stat["linkovi_dodani"] = dodano
+    if dodano:
+        logger.info("Dopunjeno poveznica koje su falile: %s", dodano)
+    return dodano > 0
 
 
 def pokreni_obradu(nacin, logger):
@@ -654,8 +678,16 @@ def pokreni_obradu(nacin, logger):
         promj3 = False
         logger.error("Greška kod obrade izvoda: %s", e)
 
+    # 3) Dopuni klik-poveznice koje fale (npr. ručno spremljeni skenovi 'UR XXXX.pdf')
+    promj4 = False
+    if config.PISI_EXCEL:
+        try:
+            promj4 = dopuni_hyperlinkove(ws, logger, stat)
+        except Exception as e:
+            logger.error("Greška kod dopune poveznica: %s", e)
+
     # Spremanje
-    if config.PISI_EXCEL and (promj1 or promj2 or promj3):
+    if config.PISI_EXCEL and (promj1 or promj2 or promj3 or promj4):
         try:
             excel_mod.spremi(wb, config.EXCEL_PATH, logger)
             stanje_mod.spremi(stanje, config.STANJE_PATH)   # zapamti obrađeno (tek nakon uspjeha)
@@ -1306,6 +1338,7 @@ def _izvjestaj(logger, stat):
     logger.info("  PDF povezan:              %s", stat["pdf_spojen"])
     logger.info("  PDF nije nađen:           %s", stat["pdf_nije_nadjen"])
     logger.info("  Datoteke → Parra mapu:    %s", stat["parra_premjesteno"])
+    logger.info("  Poveznice dopunjene:      %s", stat["linkovi_dodani"])
     logger.info("  --- IZVODI ---")
     logger.info("  Izvoda obrađeno:          %s", stat["izvoda_obradeno"])
     logger.info("  Spojeno s računom:        %s", stat["spojeno"])
