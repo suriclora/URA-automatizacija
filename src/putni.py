@@ -43,7 +43,9 @@ def procitaj_naloge(excel_path):
         djelatnik = _val_desno(ws, "djelatnik:")
         datum = _datum(_val_desno(ws, "datum odlaska"))
         iznos = _val_desno(ws, "za isplatu")
-        if not djelatnik or iznos in (None, "", 0):
+        # 0 je VALJAN iznos (npr. kratki put bez dnevnice) -> upiši ga; preskoči samo ako
+        # nema djelatnika ili iznos uopće nije izračunat (None/prazno).
+        if not djelatnik or iznos in (None, ""):
             continue  # prazan ili nedovršen nalog
         try:
             iznos = float(iznos)
