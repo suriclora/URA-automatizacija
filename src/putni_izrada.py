@@ -93,7 +93,7 @@ POLJA = {
     "E7": "vozilo", "P7": "vrsta_prijevoza", "E8": "poc_brojilo",
     "E16": "datum_povratka", "P16": "vrijeme_povratka", "E18": "zav_brojilo",
     "E19": "drzava", "G19": "dnevnica_iznos", "P19": "locco",
-    "A34": "izvjesce",   # tekst 'Izvješće s puta' (labela je u A33) — upisuje se nakon otključavanja
+    # 'Izvješće s puta' (A34) se NE popunjava — djelatnici ga pišu RUČNO (samo se očisti).
 }
 
 
@@ -189,6 +189,7 @@ def _popuni_list(nov, podaci):
             pass   # zaključana ćelija (zaštita) — preskoči
     for adr in POLJA:
         pisi(adr, None)
+    pisi("A34", None)   # očisti 'Izvješće s puta' iz predloška (djelatnici ga pišu ručno)
     # očisti LIJEVU (vidljivu) tablicu specifikacije ĆELIJU-PO-ĆELIJU. Čišćenje cijelog
     # raspona (clear_contents na A42:P48) zna TIHO pasti na zaštićenim/spojenim ćelijama —
     # tada u novom nalogu ostanu cestarine iz predloška (krivi datumi/iznosi)!

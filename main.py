@@ -1281,8 +1281,7 @@ def generiraj_naloge(godina, mjesec, enc_csv, logger):
             svrha = "ispitivanje"
         lista.append({
             "djelatnik": t["djelatnik"], "mjesto": t["lokacija"],
-            "svrha": svrha,            # padajući izbornik (E5)
-            "izvjesce": razlog,        # puni tekst razloga -> kućica 'Izvješće s puta' (A34)
+            "svrha": svrha,            # padajući izbornik (E5); 'Izvješće s puta' ostaje prazno (ručno)
             "datum_odlaska": od.date(), "vrijeme_odlaska": od.time(),
             "datum_povratka": na.date(), "vrijeme_povratka": na.time(),
             "vozilo": puni, "vrsta_prijevoza": "službeno",
