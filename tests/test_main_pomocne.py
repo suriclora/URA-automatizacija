@@ -70,3 +70,24 @@ def test_uplata_predaleko_datumski():
 
 def test_uplata_bez_brutoa():
     assert main._nadji_uplatu(None, date(2026, 5, 18), _uplate()) is None
+
+
+# ---------- _sirocad_prolazaka: ENC prolasci posuđenog uređaja ----------
+
+def test_sirocad_prolazaka():
+    # Jumpyju ne radi uređaj pa vozi s Fordovim: prolaz je pod 'ford', a Ford
+    # taj dan NEMA teren -> prolaz je 'siroče' (kandidat za pripis drugom nalogu).
+    prolasci = [
+        {"voz": "ford", "datum": date(2026, 5, 19), "iznos": 3.0, "relacija": "x"},
+        {"voz": "jumpy", "datum": date(2026, 5, 20), "iznos": 4.1, "relacija": "y"},
+    ]
+    pokriveno = [("jumpy", date(2026, 5, 19), date(2026, 5, 20))]   # samo Jumpy ima terene
+    s = main._sirocad_prolazaka(prolasci, pokriveno)
+    assert len(s) == 1
+    assert s[0]["voz"] == "ford"          # Fordov prolaz nema teren -> siroče
+
+
+def test_sirocad_nema_kad_sve_pokriveno():
+    prolasci = [{"voz": "ford", "datum": date(2026, 5, 19), "iznos": 3.0, "relacija": "x"}]
+    pokriveno = [("ford", date(2026, 5, 19), date(2026, 5, 19))]
+    assert main._sirocad_prolazaka(prolasci, pokriveno) == []

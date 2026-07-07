@@ -1215,6 +1215,14 @@ def _procitaj_tereni(godina, mjesec):
     return out
 
 
+def _sirocad_prolazaka(prolasci, pokriveno):
+    """Vrati ENC prolaske čije vozilo taj dan NEMA svoj teren ('siročad' — vjerojatno
+    posuđen uređaj, npr. pokvaren Jumpyjev pa je uzet Fordov). 'pokriveno' = lista
+    (vozilo_norm, d1, d2) za SVE terene mjeseca."""
+    return [p for p in prolasci
+            if not any(v == p["voz"] and d1 <= p["datum"] <= d2 for v, d1, d2 in pokriveno)]
+
+
 def generiraj_naloge(godina, mjesec, enc_csv, logger):
     """Izradi SVE putne naloge za mjesec iz 'tereni' tablice (+ ENC vremena). Vrati broj izrađenih."""
     logger.info("=" * 64)
@@ -1249,6 +1257,7 @@ def generiraj_naloge(godina, mjesec, enc_csv, logger):
     wbv.close()
 
     lista = []
+    meta = []          # teren za svaki element 'liste' (za pripis posuđenih ENC prolazaka)
     for t in tereni:
         kljuc = (t["djelatnik"].lower(), str(t["polazak"]), t["lokacija"].lower())
         if kljuc in postojeci:
@@ -1280,6 +1289,38 @@ def generiraj_naloge(godina, mjesec, enc_csv, logger):
             "drzava": "HR", "dnevnica_iznos": 30, "locco": 0.4,
             "troskovi": troskovi,
         })
+        meta.append(t)
+
+    # POSUĐENI ENC UREĐAJ: kad nekome ne radi uređaj pa uzme tuđi (npr. Jumpy vozi s
+    # Fordovim), prolaz je zabilježen pod krivim vozilom. Takve prolaske ("siročad" —
+    # vozilo bez terena taj dan) pripiši nalogu koji taj dan NEMA nijedan svoj prolaz.
+    # Samo ako je kandidat JEDNOZNAČAN — inače upozorenje pa korisnica upiše ručno.
+    pokriveno = []
+    for t in tereni:
+        _, nk = config.vozilo_info(t["auto"])
+        if nk:
+            pokriveno.append((vremena_mod._voz(nk), t["polazak"], t["povratak"]))
+    grupe = {}
+    for p in _sirocad_prolazaka(prolasci, pokriveno):
+        grupe.setdefault((p["voz"], p["datum"]), []).append(p)
+    for (voz, dan), grupa in sorted(grupe.items()):
+        kand = [i for i, n in enumerate(lista)
+                if not n["troskovi"] and meta[i]["polazak"] <= dan <= meta[i]["povratak"]]
+        if len(kand) == 1:
+            i = kand[0]
+            for p in grupa:
+                lista[i]["troskovi"].append({"opis": "cestarina", "izdavatelj": "hac",
+                                             "datum": p["datum"], "iznos": p["iznos"],
+                                             "sredstvo": "tvrtka"})
+            logger.info("↔️ Posuđeni ENC uređaj '%s' (%s): %s prolaza → nalog %s / %s",
+                        voz, dan, len(grupa), meta[i]["djelatnik"], meta[i]["auto"])
+        elif kand:
+            logger.warning("⚠️ ENC prolasci uređaja '%s' (%s) nemaju svoj teren, a %s je "
+                           "mogućih naloga — upiši ručno.", voz, dan, len(kand))
+        else:
+            logger.warning("⚠️ ENC prolasci uređaja '%s' (%s) nemaju svoj teren ni nalog "
+                           "bez prolazaka — provjeri/upiši ručno.", voz, dan)
+
     if not lista:
         logger.info("Svi tereni već imaju nalog — ništa novo.")
         return 0
