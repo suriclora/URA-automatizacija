@@ -189,11 +189,12 @@ def _popuni_list(nov, podaci):
             pass   # zaključana ćelija (zaštita) — preskoči
     for adr in POLJA:
         pisi(adr, None)
-    # očisti LIJEVU (vidljivu) tablicu specifikacije; DESNU (AB-AQ, zaključana obračunska) NE diramo
-    try:
-        nov.range("A42:P48").clear_contents()
-    except Exception:
-        pass
+    # očisti LIJEVU (vidljivu) tablicu specifikacije ĆELIJU-PO-ĆELIJU. Čišćenje cijelog
+    # raspona (clear_contents na A42:P48) zna TIHO pasti na zaštićenim/spojenim ćelijama —
+    # tada u novom nalogu ostanu cestarine iz predloška (krivi datumi/iznosi)!
+    for _r in range(42, 49):
+        for _c in ("A", "D", "G", "K", "M", "P"):
+            pisi(f"{_c}{_r}", None)
     for adr, kljuc in POLJA.items():
         v = podaci.get(kljuc)
         if v not in (None, ""):
