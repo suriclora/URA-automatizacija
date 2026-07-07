@@ -614,6 +614,8 @@ def dopuni_hyperlinkove(ws, logger, stat):
         return False
 
     dodano = 0
+    ur_u_knjizi = set()
+    bez_pdfa = []
     for i in range(config.HEADER_RED + 1, ws.max_row + 1):
         c = ws.cell(row=i, column=1)
         ur = c.value
@@ -621,6 +623,7 @@ def dopuni_hyperlinkove(ws, logger, stat):
             ur = int(ur)
         if not isinstance(ur, int) or ur <= 0:
             continue
+        ur_u_knjizi.add(ur)
         if c.hyperlink is not None:
             continue                         # već ima poveznicu
         f = mapa.get(ur)
@@ -628,9 +631,23 @@ def dopuni_hyperlinkove(ws, logger, stat):
             excel_mod.postavi_hyperlink(ws, i, 1, os.path.join(config.FOLDER_PDF_FINAL, f))
             dodano += 1
             logger.info("   🔗 UR %04d → %s", ur, f)
+        else:
+            bez_pdfa.append(ur)              # nema ni datoteke ni poveznice
     stat["linkovi_dodani"] = dodano
     if dodano:
         logger.info("Dopunjeno poveznica koje su falile: %s", dodano)
+
+    # UPOZORENJE na mogući tipfeler: PDF u mapi čiji UR broj NE postoji u knjizi
+    visak = sorted(u for u in mapa if u not in ur_u_knjizi)
+    if visak:
+        logger.warning("⚠️ PDF-ovi u pdf mapi BEZ retka u knjizi (tipfeler u nazivu?): %s",
+                       ", ".join(f"UR {u:04d} ({mapa[u]})" for u in visak[:10]))
+
+    # INFO: redci kojima još fali PDF/poveznica (što još treba skenirati)
+    if bez_pdfa:
+        prikaz = ", ".join(f"{u:04d}" for u in bez_pdfa[:25])
+        logger.info("📄 Redaka bez PDF poveznice: %s%s → UR %s",
+                    len(bez_pdfa), " (prvih 25)" if len(bez_pdfa) > 25 else "", prikaz)
     return dodano > 0
 
 
@@ -657,7 +674,13 @@ def pokreni_obradu(nacin, logger):
         logger.error("Nema PARRA_API_TOKEN u .env datoteci. Prekidam.")
         return stat
     if not os.path.exists(config.EXCEL_PATH):
-        logger.error("Excel ne postoji: %s", config.EXCEL_PATH)
+        # Razlikuj "server nije spojen" od "datoteka fali" — da poruka odmah kaže što napraviti
+        disk = os.path.splitdrive(config.EXCEL_PATH)[0]      # npr. 'Z:'
+        if disk and not os.path.exists(disk + "\\"):
+            logger.error("SERVER NIJE DOSTUPAN: disk %s nije spojen. Provjeri mrežu/VPN "
+                         "ili otvori %s u Exploreru pa pokušaj ponovno.", disk, disk)
+        else:
+            logger.error("Excel ne postoji: %s", config.EXCEL_PATH)
         return stat
 
     logger.info("Učitavam Excel...")

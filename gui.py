@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-URA — URA: moderna aplikacija (CustomTkinter).
+URA — automatizacija ulaznih računa: GUI (CustomTkinter).
 Dvoklik na 'pokreni_app.bat'. Prilagođeno krajnjem korisniku.
 Sva logika je u main.py; ovdje je samo izgled + povezivanje gumba.
 """

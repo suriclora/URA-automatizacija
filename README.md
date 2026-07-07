@@ -1,14 +1,27 @@
 # URA — Automatizacija obrade ulaznih računa
 
+![testovi](https://github.com/suriclora/URA-automatizacija/actions/workflows/testovi.yml/badge.svg)
+
 Desktop aplikacija (Python) koja automatizira knjiženje ulaznih računa u
 administraciji: povuče e-račune iz vanjskog servisa, poveže ih s bankovnim
 izvodima i pripremi za upis u knjigu — uz pregled i potvrdu prije svakog upisa.
+
+> 🇬🇧 **English summary:** A Python desktop app that automates incoming-invoice
+> bookkeeping for a small business: it fetches e-invoices via a REST API, reads
+> PDFs and photographed receipts (OCR), matches payments from bank statements to
+> invoices (fuzzy matching), and fills an Excel ledger — always with a
+> review-and-confirm step before writing anything. Built by a career-changer using
+> an AI coding assistant (Claude Code); in daily production use (~200 documents/month,
+> hours of manual work reduced to minutes). This repo is a portfolio version running
+> entirely on fictional demo data — no real data or secrets included.
 
 > **Napomena:** Ovo je *portfolio* verzija. Radi na **potpuno izmišljenim demo
 > podacima** i ne sadrži nikakve stvarne podatke ni tajne. Sve putanje i ključevi
 > postavljaju se kroz `.env` (vidi `.env.example`).
 
-🎥 **Demo video:** [media/demo.mp4](media/demo.mp4) — kratak prikaz rada aplikacije (klikni za reprodukciju).
+![Demo aplikacije](media/demo.gif)
+
+🎥 **Demo video (puna brzina):** [media/demo.mp4](media/demo.mp4)
 
 ---
 
@@ -97,6 +110,17 @@ python gui.py
 > `requirements.txt`; pri prvom pokretanju skine jezični model). Opcionalno se kao
 > rezerva može instalirati i **Tesseract**. Ostatak aplikacije radi i bez OCR-a.
 
+## Testovi
+
+Ključna logika (čitanje iznosa/datuma s računa, prepoznavanje datoteka, leasing
+obroci, putni nalozi) pokrivena je automatskim testovima koji se vrte i na GitHubu
+(Actions) pri svakoj promjeni:
+
+```bash
+pip install pytest
+pytest tests
+```
+
 Za pravi rad: kopiraj `.env.example` u `.env`, postavi `DEMO=0` i upiši stvarne
 putanje/ključeve. Ništa od toga nije u kodu.
 
@@ -121,6 +145,10 @@ putanje/ključeve. Ništa od toga nije u kodu.
 ![Izvještaj](screenshots/izvjestaj.png)
 
 ![Putni nalozi](screenshots/putni-nalozi.png)
+
+**Tamni način rada** (prebacuje se gumbićem 🌙 u zaglavlju)
+
+![Tamni način](screenshots/tamni-nacin.png)
 
 ---
 

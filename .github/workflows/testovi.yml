@@ -1,0 +1,32 @@
+# Automatski testovi: GitHub ih pokrene na svaki push/PR i pokaže zelenu kvačicu.
+name: testovi
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  testovi:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Lagani skup paketa dovoljan za testove (bez EasyOCR/torch — OCR se u
+      # aplikaciji učitava lijeno, pa testovi parsera rade i bez njega).
+      - name: Instaliraj ovisnosti
+        run: >
+          pip install --quiet
+          openpyxl python-dotenv requests pypdf pdfplumber rapidfuzz
+          pillow pytesseract pytest
+
+      - name: Provjera sintakse (svi moduli)
+        run: python -m compileall -q src main.py gui.py config.py demo
+
+      - name: Pokreni testove
+        run: pytest tests -q
+        env:
+          DEMO: "1"
