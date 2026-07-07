@@ -911,21 +911,25 @@ def upisi_odabrane(sesija, odabrani_idx, logger):
     return stat
 
 
-def _spoji_fotku_s_uplatom(o, uplate):
-    """Pronađi uplatu s izvoda (UR0 bez računa) koja odgovara fotki po bruto-u i datumu."""
-    b = o.get("bruto")
-    if not b:
+def _nadji_uplatu(bruto, datum, uplate):
+    """Pronađi UR0 uplatu s izvoda (bez računa) po iznosu (±tolerancija) i datumu (±14 dana).
+    'bruto' je broj, 'datum' je date (ili None — tada se datum ne provjerava)."""
+    if not bruto:
         return None
-    od = _parse_datum_hr(o.get("datum"))
     najbolji, najd = None, 999
     for u in uplate:
-        if abs((u["placeno"] or 0) - b) > config.DEDUP_TOL_IZNOS:
+        if abs((u["placeno"] or 0) - bruto) > config.DEDUP_TOL_IZNOS:
             continue
         ud = u["datum"].date() if hasattr(u["datum"], "date") else None
-        dd = abs((ud - od).days) if (od and ud) else 0
+        dd = abs((ud - datum).days) if (datum and ud) else 0
         if dd <= 14 and dd < najd:
             najd, najbolji = dd, u
     return najbolji
+
+
+def _spoji_fotku_s_uplatom(o, uplate):
+    """Pronađi uplatu koja odgovara fotki po OCR-om pročitanom bruto-u i datumu."""
+    return _nadji_uplatu(o.get("bruto"), _parse_datum_hr(o.get("datum")), uplate)
 
 
 def skeniraj_fotke(logger):
@@ -971,8 +975,8 @@ def ocr_fotke_jedan(sesija, idx, logger):
 
 def upisi_fotku(sesija, idx, polja, logger):
     """Upiši jednu fotku (potvrđena polja s ekrana): dopuni uplatu s izvoda ili novi red,
-    pretvori sliku u 'UR XXXX.pdf' i poveži. 'polja' = {broj, datum, dobavljac, osnovica,
-    pdv, vozilo, vrsta}. Vrati dodijeljeni UR broj."""
+    pretvori sliku u 'UR XXXX.pdf' i poveži. 'polja' = {broj, datum, dobavljac, bruto,
+    osnovica, pdv, vozilo, vrsta}. Vrati dodijeljeni UR broj."""
     ws, wb, stanje = sesija["ws"], sesija["wb"], sesija["stanje"]
 
     # DUPLIKAT PO BROJU + DATUMU: isti broj računa NIJE dovoljan za preskakanje jer neki
@@ -1001,6 +1005,17 @@ def upisi_fotku(sesija, idx, polja, logger):
         sesija["backup_done"] = True
 
     k = sesija["kandidati"][idx]
+
+    # SPAJANJE S UPLATOM po POTVRĐENIM podacima (ne samo OCR-u!): korisnica često ručno
+    # upiše/ispravi bruto i datum kad ih OCR ne pročita — zato ovdje PONOVNO tražimo
+    # odgovarajuću uplatu s tim (točnim) vrijednostima. Inače bi ručno popunjene fotke
+    # uvijek završile kao novi red BEZ veze s izvodom.
+    if polja.get("bruto") is not None:
+        k["match"] = _nadji_uplatu(polja["bruto"], polja.get("datum"), sesija.get("uplate") or [])
+        if k["match"]:
+            logger.info("   🔗 potvrđeni bruto %.2f → spojen na uplatu s izvoda (red %s)",
+                        polja["bruto"], k["match"]["red"])
+
     _, zadnji_ur, _ = excel_mod.analiziraj_postojece(ws, config.HEADER_RED)
     ur = zadnji_ur + 1
 
@@ -1042,6 +1057,11 @@ def upisi_fotku(sesija, idx, polja, logger):
     if pisi:
         excel_mod.spremi(wb, config.EXCEL_PATH, logger)
         stanje_mod.spremi(stanje, config.STANJE_PATH)
+    if k["match"]:
+        try:
+            sesija["uplate"].remove(k["match"])   # potrošena — da je iduća fotka ne uzme opet
+        except ValueError:
+            pass
     logger.info("✅ UR%04d upisan (red %s): %s, %s €", ur, red, polja.get("broj"), polja.get("osnovica"))
     return ur
 

@@ -998,6 +998,7 @@ class App:
             "broj": self._f_broj.get().strip() or None,
             "datum": app._parse_datum_hr(self._f_datum.get()),
             "dobavljac": self._f_dob.get().strip() or None,
+            "bruto": _pf(self._f_bruto.get()),   # za spajanje s uplatom po POTVRĐENOM iznosu
             "osnovica": _pf(self._f_osn.get()),
             "pdv": _pf(self._f_pdv.get()),
             "vozilo": (self._f_auto.get() if config.vozilo_porez(self._f_auto.get()) else None),
