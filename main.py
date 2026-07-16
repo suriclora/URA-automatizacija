@@ -944,6 +944,11 @@ def skeniraj_fotke(logger):
         return None
     wbv = excel_mod.ucitaj_workbook_vrijednosti(config.EXCEL_PATH)
     uplate = izvjestaji_mod.izvodi_bez_racuna(wbv[config.GLAVNI_SHEET], config.HEADER_RED, None)
+    # popis djelatnika iz knjige (stupac DJELATNIK) — za padajući izbor kod gotovine
+    wsv = wbv[config.GLAVNI_SHEET]
+    djelatnici = sorted({str(wsv.cell(row=i, column=6).value).strip()
+                         for i in range(config.HEADER_RED + 1, wsv.max_row + 1)
+                         if wsv.cell(row=i, column=6).value})
     wbv.close()
     wb = excel_mod.ucitaj_workbook(config.EXCEL_PATH)
     ws = wb[config.GLAVNI_SHEET]
@@ -951,7 +956,7 @@ def skeniraj_fotke(logger):
     stanje = stanje_mod.ucitaj(config.STANJE_PATH)
     kandidati = [{"slika": s, "ocr": None, "match": None} for s in slike]   # OCR kasnije, lijeno
     return {"wb": wb, "ws": ws, "stanje": stanje, "kandidati": kandidati,
-            "uplate": uplate, "backup_done": False}
+            "uplate": uplate, "djelatnici": djelatnici, "backup_done": False}
 
 
 def ocr_fotke_jedan(sesija, idx, logger):
@@ -976,7 +981,9 @@ def ocr_fotke_jedan(sesija, idx, logger):
 def upisi_fotku(sesija, idx, polja, logger):
     """Upiši jednu fotku (potvrđena polja s ekrana): dopuni uplatu s izvoda ili novi red,
     pretvori sliku u 'UR XXXX.pdf' i poveži. 'polja' = {broj, datum, dobavljac, bruto,
-    osnovica, pdv, vozilo, vrsta}. Vrati dodijeljeni UR broj."""
+    osnovica, pdv, vozilo, vrsta, gotovina, djelatnik}. Gotovina: NE spaja se s izvodom
+    (nema je na izvodu); upiše se SREDSTVO='gotovina' + djelatnik koji je platio.
+    Vrati dodijeljeni UR broj."""
     ws, wb, stanje = sesija["ws"], sesija["wb"], sesija["stanje"]
 
     # DUPLIKAT PO BROJU + DATUMU: isti broj računa NIJE dovoljan za preskakanje jer neki
@@ -1010,7 +1017,9 @@ def upisi_fotku(sesija, idx, polja, logger):
     # upiše/ispravi bruto i datum kad ih OCR ne pročita — zato ovdje PONOVNO tražimo
     # odgovarajuću uplatu s tim (točnim) vrijednostima. Inače bi ručno popunjene fotke
     # uvijek završile kao novi red BEZ veze s izvodom.
-    if polja.get("bruto") is not None:
+    if polja.get("gotovina"):
+        k["match"] = None          # gotovina se NE pojavljuje na bankovnom izvodu
+    elif polja.get("bruto") is not None:
         k["match"] = _nadji_uplatu(polja["bruto"], polja.get("datum"), sesija.get("uplate") or [])
         if k["match"]:
             logger.info("   🔗 potvrđeni bruto %.2f → spojen na uplatu s izvoda (red %s)",
@@ -1041,6 +1050,12 @@ def upisi_fotku(sesija, idx, polja, logger):
     ws.cell(row=red, column=11).value = polja.get("pdv")
     if polja.get("dobavljac") and not ws.cell(row=red, column=5).value:
         ws.cell(row=red, column=5).value = polja["dobavljac"]
+    if polja.get("gotovina"):
+        # GOTOVINA: djelatnik koji je platio -> stupac DJELATNIK (6); SREDSTVO (18) = gotovina
+        if polja.get("djelatnik"):
+            ws.cell(row=red, column=6).value = str(polja["djelatnik"]).strip().lower()
+        ws.cell(row=red, column=18).value = "gotovina"
+        logger.info("   💵 gotovina — platio: %s", polja.get("djelatnik") or "(nije upisano)")
 
     # slika -> "UR XXXX.pdf" + link (samo u stvarnom radu / prisili)
     if premjesti:

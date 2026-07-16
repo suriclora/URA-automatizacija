@@ -818,6 +818,17 @@ class App:
                                          button_color=GUMB_HOVER, button_hover_color=GUMB_HOVER)
         self._f_auto.pack(side="right", fill="x", expand=True)
         r = red("Vrsta troška"); self._f_vrsta = ctk.CTkEntry(r); self._f_vrsta.pack(side="right", fill="x", expand=True)
+        # GOTOVINA: kvačica + djelatnik koji je platio (upisuje se u stupac DJELATNIK u knjizi)
+        r = red("Plaćanje")
+        self._f_gotovina = ctk.CTkCheckBox(r, text="gotovina (platio djelatnik)",
+                                           command=self._f_gotovina_promjena,
+                                           font=ctk.CTkFont(size=12))
+        self._f_gotovina.pack(side="right", fill="x", expand=True)
+        r = red("Djelatnik")
+        self._f_djel = ctk.CTkComboBox(r, values=self._f_sesija.get("djelatnici") or [""])
+        self._f_djel.set("")
+        self._f_djel.configure(state="disabled")
+        self._f_djel.pack(side="right", fill="x", expand=True)
         for e in (self._f_bruto, self._f_osn, self._f_pdv):
             e.bind("<KeyRelease>", lambda _=None: self._f_provjera())
         # osobni auto: kad korisnik izađe iz PDV polja, prepolovi (50% pretporeza)
@@ -925,6 +936,8 @@ class App:
         for e in (self._f_dob, self._f_datum, self._f_bruto, self._f_osn, self._f_pdv, self._f_broj, self._f_vrsta):
             e.delete(0, "end")
         self._f_auto.set("(nije vezano uz auto)")
+        self._f_gotovina.deselect()
+        self._f_gotovina_promjena()
 
     def _f_popuni(self):
         k = self._f_sesija["kandidati"][self._f_idx]
@@ -944,6 +957,8 @@ class App:
         post(self._f_broj, o.get("broj"))
         self._f_auto.set("(nije vezano uz auto)")
         post(self._f_vrsta, "")
+        self._f_gotovina.deselect()
+        self._f_gotovina_promjena()
         self._f_provjera()
 
     def _f_osobni_pdv(self):
@@ -985,6 +1000,14 @@ class App:
         else:
             self._f_provj.configure(text="", text_color=SIVA_TXT)
 
+    def _f_gotovina_promjena(self):
+        """Kvačica 'gotovina': uključi/isključi polje za djelatnika koji je platio."""
+        if self._f_gotovina.get():
+            self._f_djel.configure(state="normal")
+        else:
+            self._f_djel.set("")
+            self._f_djel.configure(state="disabled")
+
     def _f_rotiraj(self):
         self._f_rot = (self._f_rot + 90) % 360
         self._f_obnovi_sliku()
@@ -1003,6 +1026,8 @@ class App:
             "pdv": _pf(self._f_pdv.get()),
             "vozilo": (self._f_auto.get() if config.vozilo_porez(self._f_auto.get()) else None),
             "vrsta": self._f_vrsta.get().strip() or None,
+            "gotovina": bool(self._f_gotovina.get()),
+            "djelatnik": (self._f_djel.get().strip() or None) if self._f_gotovina.get() else None,
         }
         idx = self._f_idx
 
